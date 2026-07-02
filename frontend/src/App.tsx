@@ -75,6 +75,12 @@ export function App() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (isStaticHost()) {
+      setProfile(fallbackProfile);
+      setLoading(false);
+      return;
+    }
+
     fetch("/api/profile")
       .then((response) => {
         if (!response.ok) {
@@ -301,6 +307,13 @@ function Contact({ profile }: { profile: Profile }) {
     setIsSubmitting(true);
     setStatus("");
 
+    if (isStaticHost()) {
+      openEmailClient(profile.email, form);
+      setIsSubmitting(false);
+      setStatus("Opening email instead.");
+      return;
+    }
+
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
@@ -314,9 +327,7 @@ function Contact({ profile }: { profile: Profile }) {
       setForm({ name: "", email: "", message: "" });
       setStatus(payload.message || "Message sent.");
     } catch (err) {
-      const subject = encodeURIComponent(`Portfolio inquiry from ${form.name}`);
-      const body = encodeURIComponent(`${form.message}\n\nFrom: ${form.name} <${form.email}>`);
-      window.location.href = `mailto:${profile.email}?subject=${subject}&body=${body}`;
+      openEmailClient(profile.email, form);
       setStatus(err instanceof Error ? `${err.message}. Opening email instead.` : "Opening email instead.");
     } finally {
       setIsSubmitting(false);
@@ -574,6 +585,16 @@ function resolveHref(href: string) {
 		return href;
 	}
 	return `${import.meta.env.BASE_URL}${href.slice(1)}`;
+}
+
+function isStaticHost() {
+	return window.location.hostname.endsWith("github.io");
+}
+
+function openEmailClient(email: string, form: ContactState) {
+	const subject = encodeURIComponent(`Portfolio inquiry from ${form.name}`);
+	const body = encodeURIComponent(`${form.message}\n\nFrom: ${form.name} <${form.email}>`);
+	window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
 }
 
 function ShellState({ label }: { label: string }) {
